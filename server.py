@@ -1,113 +1,93 @@
-
-import socket  # permet de créer une communication réseau entre deux programmes
-import sys  # permet de quitter le programme et d'interagir avec l'interpréteur Python
-import time  # permet de gérer le temps
-from clientthread import ClientListener  # importe la classe ClientListener depuis clientthread.py
+import socket
 import threading
+from clientthread import ClientListener
 
 
 class Server:
+    """Serveur TCP qui accepte les clients et diffuse leurs messages."""
 
-    """ Classe Server : représente le serveur TCP.
-    Elle permet d'accepter les connexions des clients,
-    de gérer leurs sockets et de diffuser leurs messages."""
-
-    def __init__(self, port):  # constructeur
-
-        """ Initialise le serveur. self représente l'objet lui-même.
-        port : numéro du port sur lequel le serveur écoute.
-        Ici, nous avons choisi 59001."""
-
-        # Création d'une socket TCP IPv4
-        # IPv4 permet d'identifier les machines sur le réseau avec une adresse IP.
-        # TCP assure une transmission fiable et ordonnée des données.
+    def __init__(self, port=59001):
+        self.port = port
         self.listener = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-
-        # Association de la socket à toutes les interfaces réseau
-        # '' signifie que le serveur accepte les connexions sur toutes les interfaces réseau locales
         self.listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        self.listener.bind(('', port))
-        self.listener.listen(1)  # Mise en écoute du serveur
-
-        print("Listening on port", port)
-
-        # Liste contenant les sockets des clients connectés
+        self.listener.bind(("0.0.0.0", port))
+        self.listener.listen()
         self.clients_sockets = []
         self.lock = threading.Lock()
+        self.running = True
 
     def run(self):
-        """
-        Lance le serveur et attend les connexions des clients.
-        Chaque nouveau client est géré par un thread indépendant.
-        """
+        print(f"Serveur démarré. En attente sur le port {self.port}...")
+        try:
+            while self.running:
+                try:
+                    client_socket, client_address = self.listener.accept()
+                except OSError:
+                    if self.running:
+                        print("Erreur pendant l'acceptation d'un client.")
+                    break
 
-        while True:  # boucle infinie car le serveur doit rester actif
-            print("listening new customers")
+                with self.lock:
+                    self.clients_sockets.append(client_socket)
 
-            try:
-                # Accepte une nouvelle connexion
-                client_socket, client_adress = self.listener.accept()
-
-            except OSError as erreur:
-                """OSError permet de capturer les erreurs liées aux opérations système et réseau.
-                as erreur permet de récupérer le détail de l'erreur."""
-                print("Erreur lors de l'acceptation d'un client :", erreur)
-                break
-
-            # Ajoute la socket du nouveau client à la liste
-            with self.lock:
-                self.clients_sockets.append(client_socket)
-
-            print("Start the thread for client:", client_adress)
-
-            # Création et démarrage d'un thread pour gérer ce client
-            client_thread = ClientListener(self, client_socket, client_adress)
-            client_thread.start()  # méthode qui démarre le thread
-
-            time.sleep(0.1)  # met en pause le thread principal pendant 0,1 seconde
-
-    def remove_socket(self, socket):
-        """
-        Supprime la socket d'un client de la liste des clients connectés.
-        socket : socket du client à supprimer.
-        """
-
-        with self.lock:
-            if socket in self.clients_sockets:
-                self.clients_sockets.remove(socket)
+                print(f"Connexion de {client_address}")
+                thread = ClientListener(self, client_socket, client_address)
+                thread.daemon = True
+                thread.start()
+        except KeyboardInterrupt:
+            print("\nArrêt du serveur demandé.")
+        finally:
+            self.stop()
 
     def echo(self, data):
-        """
-        Diffuse un message à tous les clients connectés.
-        data : message à envoyer aux clients.
-        """
+        """Envoie le message à tous les clients connectés."""
+        encoded = data.encode("utf-8")
+        failed = []
 
-        print("echoing:", data)  # exemple : bonjour !
-
-        # Copie la liste des clients pour éviter de la modifier pendant le parcours
+        # Le verrou empêche deux diffusions simultanées de mélanger leurs envois.
         with self.lock:
-            clients = self.clients_sockets.copy()
-
-        # Parcourt toutes les sockets des clients connectés
-        for sock in clients:
-            try:
-                sock.sendall(data.encode("UTF-8"))  # envoie le message encodé en UTF-8
-
-            except OSError as erreur:
-                print("Impossible d'envoyer le message à un client :", erreur)
-                self.remove_socket(sock)
-
+            for client_socket in self.clients_sockets:
                 try:
-                    sock.close()
+                    client_socket.sendall(encoded)
+                except OSError as error:
+                    print("Erreur d'envoi à un client :", error)
+                    failed.append(client_socket)
+
+            for client_socket in failed:
+                if client_socket in self.clients_sockets:
+                    self.clients_sockets.remove(client_socket)
+                try:
+                    client_socket.close()
                 except OSError:
                     pass
 
+    def remove_socket(self, client_socket):
+        with self.lock:
+            if client_socket in self.clients_sockets:
+                self.clients_sockets.remove(client_socket)
 
-# Point d'entrée du programme
-if __name__ == "__main__":  # permet de vérifier si le fichier est exécuté directement
+    def stop(self):
+        self.running = False
+        try:
+            self.listener.close()
+        except OSError:
+            pass
 
-    # Création du serveur sur le port 59001
+        with self.lock:
+            clients = self.clients_sockets[:]
+            self.clients_sockets.clear()
+
+        for client_socket in clients:
+            try:
+                client_socket.shutdown(socket.SHUT_RDWR)
+            except OSError:
+                pass
+            try:
+                client_socket.close()
+            except OSError:
+                pass
+
+
+if __name__ == "__main__":
     server = Server(59001)
-
-    # Démarrage du serveur
     server.run()
