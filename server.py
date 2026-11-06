@@ -5,20 +5,15 @@ from clientthread import ClientListener  # importe la classe ClientListener depu
 import threading
 
 # AJOUT RECHERCHE AUTOMATIQUE : port UDP fixe sur lequel le serveur écoute les demandes de recherche.
-# Les clients l'utilisent pour trouver les serveurs sans connaître leur adresse IP.
-DISCOVERY_PORT = 59000
-
-# AJOUT RECHERCHE AUTOMATIQUE : commande envoyée par un client pour demander "qui est là ?"
-DISCOVERY_REQUEST = "DISCOVER_SERVERS"
-
-# AJOUT RECHERCHE AUTOMATIQUE : commande spécifique par laquelle le serveur renvoie son nom.
+DISCOVERY_PORT = 59000 #port UDP utilisé pour rechercher les serveurs et connaitre l'adresse IP
+DISCOVERY_REQUEST = "DISCOVER_SERVERS"# message envoyé par le client pour demander quels serveurs sont disponibles.
+DISCOVERY_REPLY = "SERVERNAME" # réponse du serveur contenant son nom et son port.
 # Format de la réponse : "SERVERNAME <port> <nom>"
-DISCOVERY_REPLY = "SERVERNAME"
 
 
 class Server:
 
-    """ Classe Server : représente le serveur TCP.
+    """ Classe Server, représente le serveur TCP.
     Elle permet d'accepter les connexions des clients,
     de gérer leurs sockets et de diffuser leurs messages."""
 
@@ -31,9 +26,8 @@ class Server:
         AJOUT RECHERCHE AUTOMATIQUE : name est le nom du serveur, renvoyé aux clients
         qui recherchent les serveurs disponibles (affiché dans leur liste)."""
 
-        # AJOUT RECHERCHE AUTOMATIQUE : on mémorise le port et le nom pour pouvoir les envoyer aux clients
         self.port = port
-        self.name = name
+        self.name = name # on donne un nom au serveur
 
         # Création d'une socket TCP IPv4
         # IPv4 permet d'identifier les machines sur le réseau avec une adresse IP.
@@ -75,8 +69,8 @@ class Server:
         while True:
 
             try:
-                # Attend une demande d'un client et récupère son adresse pour lui répondre
-                data, client_address = udp.recvfrom(1024)
+                data, client_address = udp.recvfrom(1024)  # Attend une demande d'un client et récupère son adresse pour lui répondre
+
 
             except OSError as erreur:
                 print("Erreur dans la recherche automatique :", erreur)
@@ -98,8 +92,7 @@ class Server:
         Chaque nouveau client est géré par un thread indépendant.
         """
 
-        # AJOUT RECHERCHE AUTOMATIQUE : démarre le thread qui répond aux recherches des clients
-        # daemon=True : le thread s'arrête automatiquement avec le programme principal
+        #démarre le thread qui répond aux recherches des clients
         discovery_thread = threading.Thread(target=self.discovery_loop, daemon=True)
         discovery_thread.start()
 

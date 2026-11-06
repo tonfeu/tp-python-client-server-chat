@@ -3,19 +3,16 @@ import socket
 import time
 import re
 
-# AJOUT RECHERCHE AUTOMATIQUE : mêmes constantes que dans server.py
-# (port UDP de recherche, commande de demande et commande de réponse contenant le nom du serveur)
 DISCOVERY_PORT = 59000
 DISCOVERY_REQUEST = "DISCOVER_SERVERS"
 DISCOVERY_REPLY = "SERVERNAME"
 
 
 def discover_servers(timeout=2):
-    """
-    AJOUT RECHERCHE AUTOMATIQUE : cherche les serveurs disponibles sur le réseau.
-    Envoie une demande en UDP (broadcast) et collecte les réponses pendant 'timeout' secondes.
-    Retourne une liste de tuples (nom, adresse IP, port), par exemple [("PC-Cerena", "192.168.1.25", 59001)].
-    """
+
+    """ cherche les serveurs disponibles sur le réseau
+    Envoie une demande en UDP (broadcast) et collecte les réponses pendant 'timeout' secondes
+    Retourne une liste de tuples (nom, adresse IP, port), par exemple [("PC-Cerena", "192.168.1.25", 59001)]"""
 
     servers = []
 
@@ -82,15 +79,13 @@ class Client:
         server: adresse IP ou nom du serveur
         port : port de communication du serveur
 
-        AJOUT TKINTER : deux paramètres optionnels ont été ajoutés.
+          avec l'utilisation de tkinter:
         on_message : fonction appelée à chaque message reçu (utilisée par l'interface Tkinter).
         on_disconnect : fonction appelée quand la connexion se ferme (utilisée par l'interface Tkinter).
         Si ces paramètres ne sont pas fournis, le client fonctionne comme avant, dans la console."""
 
         self.username = username
 
-        # AJOUT TKINTER : on mémorise les fonctions de rappel (callbacks) de l'interface
-        # Elles valent None en mode console, ce qui conserve l'ancien comportement (print)
         self.on_message = on_message
         self.on_disconnect = on_disconnect
 
@@ -118,10 +113,7 @@ class Client:
 
     def notify_gui(self, text):
         """
-        AJOUT TKINTER : envoie un texte à l'interface graphique (s'il y en a une).
-        En mode console, on_message vaut None et cette méthode ne fait rien,
-        car les messages sont déjà affichés avec print().
-        """
+     envoie un texte à l'interface"""
 
         if self.on_message:
             self.on_message(text)
@@ -133,13 +125,13 @@ class Client:
         while self.listening:
 
             try:
-                # Reçoit les données envoyées par le serveur
+                # recoit les données envoyées par le serveur
                 data = self.socket.recv(1024)
 
-                # AMÉLIORATION : détecte la fermeture de la connexion par le serveur
+                #détecte la fermeture de la connexion par le serveur
                 if not data:
                     print("Le serveur a fermé la connexion.")
-                    # AJOUT TKINTER : prévient aussi la fenêtre pour que l'utilisateur voie le message
+                    # prévient aussi la fenêtre pour que l'utilisateur voie le message
                     self.notify_gui("Le serveur a fermé la connexion.")
                     break
 

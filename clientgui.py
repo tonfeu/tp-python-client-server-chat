@@ -1,28 +1,23 @@
-import tkinter as tk  # AJOUT TKINTER : bibliothèque standard de Python pour créer des interfaces graphiques
+import tkinter as tk  # bibliothèque standard de Python pour créer des interfaces graphiques
 from tkinter import scrolledtext, messagebox  # zone de texte avec barre de défilement et boîtes de dialogue
 import queue  # file d'attente utilisée pour passer les messages du thread réseau au thread Tkinter
-import threading  # AJOUT RECHERCHE AUTOMATIQUE : lance la recherche dans un thread pour ne pas figer la fenêtre
+import threading  # lance la recherche dans un thread pour ne pas figer la fenêtre
 from client import Client, discover_servers  # réutilise la classe Client de client.py (toute la logique réseau reste là-bas)
 # discover_servers : fonction de client.py qui cherche les serveurs disponibles sur le réseau
 
 
 class ChatWindow:
-    """Classe ChatWindow : interface graphique Tkinter du chat.
-    Elle affiche d'abord un écran de connexion (pseudo, serveur, port),
-    puis l'écran de discussion (messages reçus, champ de saisie, boutons)."""
+    """ Elle affiche d'abord un écran de connexion puis l'écran de discussion"""
 
     def __init__(self, root):
-        """Initialise la fenêtre.
-        root : fenêtre principale Tkinter (créée avec tk.Tk())."""
+       # root : fenêtre principale Tkinter
 
         self.root = root
         self.root.title("Chat client-serveur")
 
-        self.client = None  # sera créé quand l'utilisateur clique sur "Se connecter"
+        self.client = None  # "Se connecter"
 
-        # Le thread réseau ne doit JAMAIS modifier directement les widgets Tkinter
-        # (Tkinter n'est pas thread-safe) : il dépose ses messages dans cette file,
-        # et la fenêtre les lit régulièrement dans check_queue()
+        """tk depose les message dans la file et la fenêtre les lit régulièrement dans check_queue()"""
         self.messages = queue.Queue()
 
         self.build_login_frame()
@@ -36,9 +31,6 @@ class ChatWindow:
         # Lance la lecture régulière de la file de messages
         self.check_queue()
 
-    # ------------------------------------------------------------------
-    # Construction de l'interface
-    # ------------------------------------------------------------------
 
     def build_login_frame(self):
         """Construit l'écran de connexion : pseudo, adresse du serveur et port."""
@@ -51,7 +43,7 @@ class ChatWindow:
 
         tk.Label(self.login_frame, text="Serveur :").grid(row=1, column=0, sticky="e", pady=3)
         self.server_entry = tk.Entry(self.login_frame, width=25)
-        self.server_entry.insert(0, "localhost")  # valeur par défaut : serveur lancé sur la même machine
+        self.server_entry.insert(0, "localhost")  
         self.server_entry.grid(row=1, column=1, pady=3)
 
         tk.Label(self.login_frame, text="Port :").grid(row=2, column=0, sticky="e", pady=3)
@@ -59,12 +51,11 @@ class ChatWindow:
         self.port_entry.insert(0, "59001")  # port choisi dans server.py
         self.port_entry.grid(row=2, column=1, pady=3)
 
-        # AJOUT RECHERCHE AUTOMATIQUE : bouton qui lance la recherche des serveurs sur le réseau
-        self.search_button = tk.Button(self.login_frame, text="Rechercher les serveurs",
-                                       command=self.search_servers)
+        #  bouton qui lance la recherche des serveurs sur le réseau
+        self.search_button = tk.Button(self.login_frame, text="Rechercher les serveurs", command=self.search_servers)
         self.search_button.grid(row=3, column=0, columnspan=2, pady=(10, 3))
 
-        # AJOUT RECHERCHE AUTOMATIQUE : liste des serveurs trouvés (nom, adresse IP et port)
+        # liste des serveurs trouvés
         self.servers_listbox = tk.Listbox(self.login_frame, height=4, width=40, exportselection=False)
         self.servers_listbox.grid(row=4, column=0, columnspan=2, pady=3)
 
@@ -103,33 +94,27 @@ class ChatWindow:
         tk.Button(bottom, text="Quitter", command=self.quit_app).pack(side="left", padx=(5, 0))
 
     def show_login(self):
-        """Affiche l'écran de connexion et cache l'écran de discussion."""
-
+        #Affiche l'écran de connexion et cache l'écran de discussion
         self.chat_frame.pack_forget()
         self.login_frame.pack()
         self.username_entry.focus_set()
 
     def show_chat(self):
-        """Affiche l'écran de discussion et cache l'écran de connexion."""
-
+        #Affiche l'écran de discussion et cache l'écran de connexion
         self.login_frame.pack_forget()
         self.chat_frame.pack(fill="both", expand=True)
         self.message_entry.focus_set()
 
     def on_enter(self):
-        """Réagit à la touche Entrée selon l'écran affiché."""
-
+        #Réagit à la touche Entrée selon l'écran affiché
         if self.client is None:
             self.connect()
         else:
             self.send_message()
 
-    # ------------------------------------------------------------------
-    # Actions de l'utilisateur
-    # ------------------------------------------------------------------
-
+    
     def search_servers(self):
-        """AJOUT RECHERCHE AUTOMATIQUE : lance la recherche des serveurs sur le réseau."""
+        #AJOUT RECHERCHE AUTOMATIQUE : lance la recherche des serveurs sur le réseau
 
         # Désactive le bouton pendant la recherche et affiche un message d'attente
         self.search_button.config(state="disabled")
@@ -140,14 +125,12 @@ class ChatWindow:
         threading.Thread(target=self.run_search, daemon=True).start()
 
     def run_search(self):
-        """AJOUT RECHERCHE AUTOMATIQUE : exécutée dans un thread, elle appelle discover_servers()
-        puis dépose le résultat dans la file (comme pour les messages du chat)."""
-
+        
         servers = discover_servers()
         self.messages.put(("servers", servers))
 
     def on_server_selected(self, event):
-        """AJOUT RECHERCHE AUTOMATIQUE : remplit les champs Serveur et Port avec le serveur choisi dans la liste."""
+       # remplit les champs Serveur et Port avec le serveur choisi dans la liste
 
         selection = self.servers_listbox.curselection()
 
@@ -164,7 +147,7 @@ class ChatWindow:
         self.port_entry.insert(0, str(port))
 
     def connect(self):
-        """Lit les champs de connexion, crée le Client et démarre l'écoute."""
+        #Lit les champs de connexion, crée le Client et démarre l'écoute
 
         username = self.username_entry.get().strip()
         server = self.server_entry.get().strip()
@@ -182,7 +165,7 @@ class ChatWindow:
 
         try:
             # on_message et on_disconnect sont les "callbacks" ajoutés dans client.py :
-            # le Client les appelle quand il reçoit un message ou perd la connexion
+            # le Client les appelle quand il recoit un message ou perd la connexion
             self.client = Client(username, server, port,
                                  on_message=self.on_client_message,
                                  on_disconnect=self.on_client_disconnect)
@@ -199,7 +182,7 @@ class ChatWindow:
         self.show_chat()
 
     def send_message(self):
-        """Envoie le texte saisi au serveur."""
+        #Envoie le texte saisi au serveur
 
         if self.client is None:
             return
@@ -220,7 +203,7 @@ class ChatWindow:
             self.client.send(text)
 
     def quit_app(self):
-        """Se déconnecte proprement du serveur puis ferme la fenêtre."""
+        #Se déconnecte proprement du serveur puis ferme la fenêtre
 
         if self.client is not None and self.client.listening:
             self.client.send("QUIT")  # prévient le serveur du départ
@@ -228,24 +211,21 @@ class ChatWindow:
 
         self.root.destroy()
 
-    # ------------------------------------------------------------------
-    # Réception des messages (thread réseau -> interface)
-    # ------------------------------------------------------------------
+
 
     def on_client_message(self, text):
-        """Appelée par le thread réseau du Client à chaque message reçu.
-        On ne touche pas aux widgets ici : on met seulement le texte dans la file."""
+         # met seulement le texte dans la file
 
         self.messages.put(("message", text))
 
     def on_client_disconnect(self):
-        """Appelée par le Client quand la connexion est fermée."""
+        #Appelée par le Client quand la connexion est fermée
 
         self.messages.put(("disconnect", None))
 
     def check_queue(self):
-        """Vérifie la file toutes les 100 ms et met à jour la fenêtre.
-        Cette méthode s'exécute dans le thread Tkinter, donc elle peut modifier les widgets."""
+        ##Vérifie la file toutes les 100 ms et met à jour la fenêtre
+        
 
         while not self.messages.empty():
             kind, text = self.messages.get()

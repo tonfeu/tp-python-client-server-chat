@@ -28,6 +28,12 @@ class ClientListener(threading.Thread): # qui hérite de thread
         # AMÉLIORATION : permet de savoir si la déconnexion a déjà été effectuée
         self.disconnected = False
 
+
+
+        """La méthode recv() permet de recevoir les données envoyées par le client.
+                       Le nombre 1024 représente la quantité maximale d'octets que Python essaie de lire lors de cet appel.
+                       Cela ne signifie pas que le message doit obligatoirement faire 1024 octets"""
+
     def run(self):
         """Fonction exécutée automatiquement au démarrage du thread.
         Elle reçoit les messages envoyés par le client. """
@@ -36,27 +42,22 @@ class ClientListener(threading.Thread): # qui hérite de thread
             try:
                 # Reçoit les données envoyées par le client
                 data = self.socket.recv(1024)
+                #  recv() retourne des données vides lorsque le client ferme sa connexion
 
-                """La méthode recv() permet de recevoir les données envoyées par le client.
-               Le nombre 1024 représente la quantité maximale d'octets que Python essaie de lire lors de cet appel.
-               Cela ne signifie pas que le message doit obligatoirement faire 1024 octets"""
-
-                # AMÉLIORATION : recv() retourne des données vides lorsque le client ferme sa connexion
                 if not data:
                     print("Le client s'est déconnecté :", self.address)
                     self.quit()
                     break
-
-                # AMÉLIORATION : transforme les octets reçus en texte UTF-8
+                # transforme les octets reçus en texte UTF-8
                 data = data.decode('UTF-8')
 
-            # AMÉLIORATION : capture les erreurs liées à la réception réseau
+            # capture les erreurs liées à la réception réseau
             except socket.error as erreur:
                 print("Erreur lors de la réception des données :", erreur)
                 self.quit()
                 break
 
-            # AMÉLIORATION : détecte les données qui ne peuvent pas être décodées en UTF-8
+            # détecte les données qui ne peuvent pas être décodées en UTF-8
             except UnicodeDecodeError:
                 print("Erreur : le message reçu possède un encodage invalide.")
                 self.quit()
@@ -71,7 +72,7 @@ class ClientListener(threading.Thread): # qui hérite de thread
     def quit(self):
         """Déconnecte le client et informe les autres clients de son départ"""
 
-        # AMÉLIORATION : évite de traiter plusieurs fois la même déconnexion
+        #  évite de traiter plusieurs fois la même déconnexion
         if self.disconnected:
             return
 
@@ -116,9 +117,8 @@ class ClientListener(threading.Thread): # qui hérite de thread
 
         else:
 
-            # AJOUT TKINTER : on termine chaque message par un retour à la ligne ("\n"),
-            # comme pour "has joined" et "has quit". Ainsi, quand plusieurs messages arrivent
+            #  on termine chaque message par un retour à la ligne ("\n"),
+            # comme pour "has joined" et "has quit"quand plusieurs messages arrivent
             # dans le même paquet TCP, le client peut les séparer ligne par ligne
-            # (nécessaire pour un affichage propre dans la fenêtre Tkinter).
             self.server.echo(data + "\n") # Transmet le message aux clients connectés
               
